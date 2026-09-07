@@ -1475,53 +1475,66 @@
         setTimeout(() => { if (typeof window.renderLayout === 'function') window.renderLayout(); }, 600);
     </script>
     <script>
-        const oldRenderViewVongQuay_Sinh = window.renderViewVongQuay;
-        window.renderViewVongQuay = function() {
-            let html = oldRenderViewVongQuay_Sinh();
+        // Dùng bộ quét để liên tục kiểm tra xem thầy có đang ở màn hình Gọi tên không
+        setInterval(() => {
+            const stage = document.getElementById('picker-stage');
             
-            // Tìm và chèn thêm nút môn Sinh tự động bất kể cấu trúc code gốc
-            if (!html.includes('mon_sinh')) {
-                if (html.includes('value="low_points"')) {
-                    html = html.replace(/<option value=['"]low_points['"][^>]*>.*?<\/option>/, '$&<option value="mon_sinh">🧬 Các bạn thi môn Sinh</option>');
-                } else if (html.includes('low_points')) {
-                    html = html.replace(/{\s*id:\s*['"]low_points['"][^}]+}/, "$&, { id: 'mon_sinh', label: '🧬 Các bạn thi môn Sinh' }");
+            // Nếu đang mở Gọi tên mà chưa có nút Môn Sinh của mình
+            if (stage && !document.getElementById('btn-mon-sinh')) {
+                // Tạo một nút bấm xịn sò nổi lên trên
+                const btn = document.createElement('button');
+                btn.id = 'btn-mon-sinh';
+                btn.className = 'absolute top-4 left-4 z-50 bg-emerald-500 text-white px-4 py-2 rounded-xl shadow-lg font-bold hover:bg-emerald-600 transition-all border-2 border-white flex items-center gap-2';
+                btn.innerHTML = '<span>🧬 Lọc 6 bạn thi Sinh</span>';
+                
+                // Khi thầy bấm nút này, nó sẽ tự động lọc 6 bạn ra
+                btn.onclick = function() {
+                    stage.innerHTML = ''; // Xóa sạch vòng quay cũ
+                    
+                    // Tìm các bạn có chữ "Sinh"
+                    let listItems = window.state.students.filter(s => (s.role || '').toLowerCase().includes('sinh'));
+                    
+                    if(listItems.length === 0) {
+                        alert("Thầy chưa thêm chữ 'Sinh' vào ô Vai trò của 6 em ạ!");
+                        return;
+                    }
+                    
+                    // Đưa 6 em này vào vòng quay
+                    window.pickerItems = listItems.map((item) => { 
+                        const el = document.createElement('div'); 
+                        el.className = `absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl p-3 shadow-xl flex flex-col items-center justify-center gap-2 border-2 border-emerald-400 will-change-transform z-10`; 
+                        el.style.width = '110px'; el.style.height = '130px'; 
+                        
+                        let avatarHtml = typeof window.getAvatarImg === 'function' 
+                            ? window.getAvatarImg(item.avatarUrl, item.name, "w-14 h-14 pointer-events-none rounded-full ring-2 ring-emerald-100 object-cover") 
+                            : `<div class="w-14 h-14 bg-emerald-100 flex items-center justify-center rounded-full text-xl text-emerald-700 font-bold">${item.name.charAt(0)}</div>`; 
+                            
+                        el.innerHTML = `${avatarHtml}<div class="text-xs font-black text-slate-800 text-center w-full whitespace-normal leading-tight">${item.name}</div>`; 
+                        stage.appendChild(el); 
+                        
+                        return { 
+                            el: el, data: item, 
+                            x: (Math.random() - 0.5) * (stage.offsetWidth - 150), 
+                            y: (Math.random() - 0.5) * (stage.offsetHeight - 150), 
+                            angle: Math.random() * Math.PI * 2, 
+                            speed: 0.8 + Math.random() 
+                        }; 
+                    });
+                    
+                    // Hiệu ứng nháy nền xanh lá báo hiệu đã lọc xong
+                    if(stage.parentElement) {
+                        stage.parentElement.style.backgroundColor = '#ecfdf5';
+                        setTimeout(() => stage.parentElement.style.backgroundColor = '', 500);
+                    }
+                };
+                
+                // Gắn nút này vào góc trái bên trên màn hình Gọi tên
+                if (stage.parentElement) {
+                    stage.parentElement.style.position = 'relative';
+                    stage.parentElement.appendChild(btn);
                 }
             }
-            return html;
-        };
-
-        const oldInitPickerCards_Sinh = window.initPickerCards;
-        window.initPickerCards = function() {
-            if (window.pickerType === 'mon_sinh') {
-                const stage = document.getElementById('picker-stage'); 
-                if (!stage) return; 
-                stage.innerHTML = ''; 
-                
-                let listItems = window.state.students.filter(s => {
-                    const r = (s.role || '').toLowerCase();
-                    return r.includes('sinh');
-                });
-                
-                if(!listItems || listItems.length === 0) { 
-                    stage.innerHTML = `<div class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-slate-500"><i class="ph-fill ph-warning-circle text-6xl text-yellow-500 mb-4"></i><div class="text-xl font-black mb-2 text-slate-700">Chưa tìm thấy học sinh nào!</div><div class="text-sm font-medium">Bạn hãy kiểm tra lại xem đã thêm chữ "Sinh" vào ô Vai trò chưa nhé.</div></div>`; 
-                    return; 
-                }
-                
-                window.pickerItems = listItems.map((item) => { 
-                    const el = document.createElement('div'); 
-                    el.className = `absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl p-3 shadow-lg flex flex-col items-center justify-center gap-2 border border-slate-100 will-change-transform z-10`; 
-                    el.style.width = '110px'; el.style.height = '130px'; 
-                    let avatarHtml = window.getAvatarImg(item.avatarUrl, item.name, "w-16 h-16 pointer-events-none ring-4 ring-white"); 
-                    el.innerHTML = `<div class="rounded-full p-1 bg-slate-100">${avatarHtml}</div><div class="text-xs font-black text-slate-800 text-center w-full truncate pointer-events-none">${item.name}</div>`; 
-                    stage.appendChild(el); 
-                    return { el: el, data: item, x: (Math.random() - 0.5) * (stage.offsetWidth - 150), y: (Math.random() - 0.5) * (stage.offsetHeight - 150), angle: Math.random() * Math.PI * 2, speed: 0.8 + Math.random() }; 
-                });
-            } else {
-                oldInitPickerCards_Sinh();
-            }
-        };
-
-        setTimeout(() => { if (typeof window.renderLayout === 'function') window.renderLayout(); }, 800);
+        }, 1000);
     </script>
 </body>
 </html> 
