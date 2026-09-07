@@ -1350,5 +1350,31 @@
 
         window.onload = function() { if(!window.useCloud) window.fallbackLoad(); };
     </script>
+     <script>
+        const oldRenderSidebar = window.renderSidebar;
+        window.renderSidebar = function() {
+            let html = oldRenderSidebar();
+            // Thu gọn menu trên điện thoại và thêm nút đóng
+            html = html.replace('w-[280px]', 'fixed md:static inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 w-[280px]').replace('z-20', 'z-[105]');
+            html = html.replace('<div class="absolute inset-0 opacity-20', '<button onclick="document.querySelector(\\'aside\\').classList.add(\\'-translate-x-full\\')" class="md:hidden absolute top-4 right-4 text-white hover:bg-white/20 z-50 w-8 h-8 flex items-center justify-center rounded-full"><i class="ph-bold ph-x text-lg"></i></button><div class="absolute inset-0 opacity-20');
+            // Tự động đóng menu khi bấm chọn chức năng
+            html = html.replace(/window\.switchTab\('([^']+)'\)/g, "window.switchTab('$1'); const aside = document.querySelector('aside'); if(aside) aside.classList.add('-translate-x-full');");
+            return html;
+        };
+
+        const oldRenderHeader = window.renderHeader;
+        window.renderHeader = function() {
+            let html = oldRenderHeader();
+            // Thêm nút Menu 3 gạch (Hamburger) trên thanh tiêu đề
+            html = html.replace('<div class="flex items-center gap-3">', '<div class="flex items-center gap-2 md:gap-3"><button onclick="document.querySelector(\\'aside\\').classList.remove(\\'-translate-x-full\\')" class="md:hidden p-1.5 bg-white rounded-lg shadow-sm border border-slate-200 text-slate-600"><i class="ph-bold ph-list text-xl"></i></button>');
+            html = html.replace('hidden md:block capitalize', 'capitalize truncate max-w-[130px] sm:max-w-none text-[16px] md:text-xl block');
+            html = html.replace('px-6 py-4', 'px-3 md:px-6 py-3 md:py-4');
+            return html;
+        };
+        
+        // Cập nhật lại giao diện ngay lập tức
+        setTimeout(() => { if (typeof window.renderLayout === 'function') window.renderLayout(); }, 500);
+    </script>
 </body>
-</html>
+</html> 
+
