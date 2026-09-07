@@ -1455,6 +1455,25 @@
         // Ép app tải lại với giao diện mới ngay lập tức
         setTimeout(() => { if (typeof window.renderLayout === 'function') window.renderLayout(); }, 500);
     </script>
+    <script>
+        // 1. Cho phép hiển thị đủ tên ở mục "Tổ thi đua"
+        const oldRenderViewNhomThiDua = window.renderViewNhomThiDua;
+        window.renderViewNhomThiDua = function() {
+            let html = oldRenderViewNhomThiDua();
+            // Xóa lệnh cắt chữ (truncate) và ép tự động xuống dòng (whitespace-normal)
+            return html.replace(/truncate mb-0\.5/g, 'mb-0.5 whitespace-normal');
+        };
+
+        // 2. Cho phép hiển thị đủ tên ở mục "Học sinh"
+        const oldRenderViewHocSinh = window.renderViewHocSinh;
+        window.renderViewHocSinh = function() {
+            let html = oldRenderViewHocSinh();
+            return html.replace(/truncate leading-tight/g, 'leading-tight whitespace-normal');
+        };
+        
+        // Tự động làm mới giao diện
+        setTimeout(() => { if (typeof window.renderLayout === 'function') window.renderLayout(); }, 600);
+    </script>
 </body>
 </html> 
 
