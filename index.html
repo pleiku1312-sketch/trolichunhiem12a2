@@ -1474,15 +1474,19 @@
         // Tự động làm mới giao diện
         setTimeout(() => { if (typeof window.renderLayout === 'function') window.renderLayout(); }, 600);
     </script>
- <script>
+   <script>
         // 1. Thêm nút "Các bạn thi môn Sinh" vào danh sách Vòng quay
         const oldRenderViewVongQuay_Sinh = window.renderViewVongQuay;
         window.renderViewVongQuay = function() {
             let html = oldRenderViewVongQuay_Sinh();
-            return html.replace(
-                "{ id: 'low_points', label: '📈 Học sinh cần gỡ điểm' }", 
-                "{ id: 'low_points', label: '📈 Học sinh cần gỡ điểm' }, { id: 'mon_sinh', label: '🧬 Các bạn thi môn Sinh' }"
-            );
+            // Đảm bảo không bị trùng lặp nếu thầy đã dán rồi
+            if (!html.includes('mon_sinh')) {
+                html = html.replace(
+                    "{ id: 'low_points', label: '📈 Học sinh cần gỡ điểm' }", 
+                    "{ id: 'low_points', label: '📈 Học sinh cần gỡ điểm' }, { id: 'mon_sinh', label: '🧬 Các bạn thi môn Sinh' }"
+                );
+            }
+            return html;
         };
 
         // 2. Logic trích xuất các bạn có chữ "Sinh"
@@ -1493,21 +1497,19 @@
                 if (!stage) return; 
                 stage.innerHTML = ''; 
                 
-                // Tìm các học sinh có chữ "Sinh" trong Vai trò, Mục tiêu hoặc Năng khiếu
+                // Tìm học sinh có chữ "Sinh" trong Vai trò
                 let listItems = window.state.students.filter(s => {
                     const r = (s.role || '').toLowerCase();
-                    const g = (s.goal || '').toLowerCase();
-                    const t = (s.talent || '').toLowerCase();
-                    return r.includes('sinh') || g.includes('sinh') || t.includes('sinh');
+                    return r.includes('sinh');
                 });
                 
-                // Báo lỗi thân thiện nếu chưa có ai
+                // Báo lỗi thân thiện nếu chưa tìm thấy
                 if(!listItems || listItems.length === 0) { 
-                    stage.innerHTML = `<div class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-slate-500"><i class="ph-fill ph-warning-circle text-6xl text-yellow-500 mb-4 animate-bounce-slight"></i><div class="text-xl font-black mb-2 text-slate-700">Chưa tìm thấy học sinh nào!</div><div class="text-sm font-medium">Bạn hãy vào mục <b>Học sinh</b> -> Chọn Sửa -> Gõ thêm chữ <b>Sinh</b> vào ô <b>Vai trò</b> (VD: <i>Thi Sinh</i>) cho các em nhé.</div></div>`; 
+                    stage.innerHTML = `<div class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-slate-500"><i class="ph-fill ph-warning-circle text-6xl text-yellow-500 mb-4"></i><div class="text-xl font-black mb-2 text-slate-700">Chưa tìm thấy học sinh nào!</div><div class="text-sm font-medium">Bạn hãy kiểm tra lại xem đã thêm chữ "Sinh" vào ô Vai trò của 6 em chưa nhé.</div></div>`; 
                     return; 
                 }
                 
-                // Hiển thị vòng quay
+                // Hiển thị vòng quay cho 6 em
                 window.pickerItems = listItems.map((item) => { 
                     const el = document.createElement('div'); 
                     el.className = `absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl p-3 shadow-lg flex flex-col items-center justify-center gap-2 border border-slate-100 will-change-transform z-10`; 
@@ -1522,7 +1524,7 @@
             }
         };
 
-        // Tự động làm mới
+        // Tự động làm mới giao diện
         setTimeout(() => { if (typeof window.renderLayout === 'function') window.renderLayout(); }, 700);
     </script>
 </body>
