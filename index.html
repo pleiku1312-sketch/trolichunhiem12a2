@@ -1474,6 +1474,57 @@
         // Tự động làm mới giao diện
         setTimeout(() => { if (typeof window.renderLayout === 'function') window.renderLayout(); }, 600);
     </script>
+ <script>
+        // 1. Thêm nút "Các bạn thi môn Sinh" vào danh sách Vòng quay
+        const oldRenderViewVongQuay_Sinh = window.renderViewVongQuay;
+        window.renderViewVongQuay = function() {
+            let html = oldRenderViewVongQuay_Sinh();
+            return html.replace(
+                "{ id: 'low_points', label: '📈 Học sinh cần gỡ điểm' }", 
+                "{ id: 'low_points', label: '📈 Học sinh cần gỡ điểm' }, { id: 'mon_sinh', label: '🧬 Các bạn thi môn Sinh' }"
+            );
+        };
+
+        // 2. Logic trích xuất các bạn có chữ "Sinh"
+        const oldInitPickerCards_Sinh = window.initPickerCards;
+        window.initPickerCards = function() {
+            if (window.pickerType === 'mon_sinh') {
+                const stage = document.getElementById('picker-stage'); 
+                if (!stage) return; 
+                stage.innerHTML = ''; 
+                
+                // Tìm các học sinh có chữ "Sinh" trong Vai trò, Mục tiêu hoặc Năng khiếu
+                let listItems = window.state.students.filter(s => {
+                    const r = (s.role || '').toLowerCase();
+                    const g = (s.goal || '').toLowerCase();
+                    const t = (s.talent || '').toLowerCase();
+                    return r.includes('sinh') || g.includes('sinh') || t.includes('sinh');
+                });
+                
+                // Báo lỗi thân thiện nếu chưa có ai
+                if(!listItems || listItems.length === 0) { 
+                    stage.innerHTML = `<div class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-slate-500"><i class="ph-fill ph-warning-circle text-6xl text-yellow-500 mb-4 animate-bounce-slight"></i><div class="text-xl font-black mb-2 text-slate-700">Chưa tìm thấy học sinh nào!</div><div class="text-sm font-medium">Bạn hãy vào mục <b>Học sinh</b> -> Chọn Sửa -> Gõ thêm chữ <b>Sinh</b> vào ô <b>Vai trò</b> (VD: <i>Thi Sinh</i>) cho các em nhé.</div></div>`; 
+                    return; 
+                }
+                
+                // Hiển thị vòng quay
+                window.pickerItems = listItems.map((item) => { 
+                    const el = document.createElement('div'); 
+                    el.className = `absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl p-3 shadow-lg flex flex-col items-center justify-center gap-2 border border-slate-100 will-change-transform z-10`; 
+                    el.style.width = '110px'; el.style.height = '130px'; 
+                    let avatarHtml = window.getAvatarImg(item.avatarUrl, item.name, "w-16 h-16 pointer-events-none ring-4 ring-white"); 
+                    el.innerHTML = `<div class="rounded-full p-1 bg-slate-100">${avatarHtml}</div><div class="text-xs font-black text-slate-800 text-center w-full truncate pointer-events-none">${item.name}</div>`; 
+                    stage.appendChild(el); 
+                    return { el: el, data: item, x: (Math.random() - 0.5) * (stage.offsetWidth - 150), y: (Math.random() - 0.5) * (stage.offsetHeight - 150), angle: Math.random() * Math.PI * 2, speed: 0.8 + Math.random() }; 
+                });
+            } else {
+                oldInitPickerCards_Sinh();
+            }
+        };
+
+        // Tự động làm mới
+        setTimeout(() => { if (typeof window.renderLayout === 'function') window.renderLayout(); }, 700);
+    </script>
 </body>
 </html> 
 
