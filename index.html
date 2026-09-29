@@ -752,74 +752,63 @@
             return `<div class="animate-fade-in flex flex-col lg:flex-row h-full gap-6 pb-4"><div class="w-full lg:w-96 flex-shrink-0 bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col h-full overflow-y-auto custom-scrollbar p-6"><h3 class="text-xl font-black text-slate-800 mb-4 flex items-center gap-2"><i class="ph-fill ph-magic-wand text-purple-600"></i> Chế độ gọi tên</h3><div class="space-y-2 mb-6">${types.map(t => `<button onclick="window.pickerType='${t.id}'; window.renderLayout();" class="w-full py-3 px-4 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between ${window.pickerType === t.id ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}"><span>${t.label}</span>${window.pickerType === t.id ? '<i class="ph-bold ph-check"></i>' : ''}</button>`).join('')}</div>${window.pickerType === 'multi' ? `<div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 mb-6 animate-fade-in"><label class="block text-xs font-black text-indigo-900 mb-2 uppercase">Số lượng học sinh cần gọi:</label><div class="flex gap-2">${[2, 3, 4, 5].map(n => `<button onclick="window.multiCount=${n}; window.renderLayout();" class="flex-1 py-2 rounded-xl text-sm font-black transition-all ${window.multiCount === n ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-indigo-600 border border-indigo-200'}">${n} em</button>`).join('')}</div></div>` : ''}<div class="mt-auto space-y-4"><button onclick="window.startPicking()" id="btn-start-pick" class="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl shadow-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 text-lg"><i class="ph-fill ph-play text-2xl"></i> BẮT ĐẦU GỌI</button></div></div><div class="flex-1 rounded-[2rem] overflow-hidden relative border border-slate-200 shadow-inner bg-slate-50 min-h-[400px]" id="picker-stage"></div></div>`;
         };
 
-       window.renderViewXepHang = function() {
+      window.renderViewXepHang = function() {
             const studentsCalculated = window.state.students.map(s => { 
                 let displayPoints = 0, noLucPoints = 0, hiepSiPoints = 0;
                 
+                const processHistory = (h) => {
+                    displayPoints += (h.points || 0); 
+                    if (h.points > 0) {
+                        const r = (h.reason || '').toLowerCase();
+                        // Ngôi Sao Nỗ Lực: Gắn với sự vươn lên, phát biểu, xung phong sửa bài hàng ngày
+                        if (r.includes('tiến bộ') || r.includes('phát biểu') || r.includes('xung phong') || r.includes('sửa bài') || r.includes('lên bảng')) {
+                            noLucPoints += h.points; 
+                        }
+                        // Hiệp Sĩ Thầm Lặng: Gắn với ôn thi HSG, phong trào, trách nhiệm, nề nếp
+                        if (h.category === 'Phong trào' || h.category === 'Nề nếp' || h.category === 'Trách nhiệm' || r.includes('phụ đạo') || r.includes('hsg') || r.includes('hành động đẹp') || r.includes('trực nhật')) {
+                            hiepSiPoints += h.points; 
+                        }
+                    }
+                };
+
                 if (window.selectedWeekFilter === 'all') { 
                     displayPoints = s.points || 0; 
-                    if (Array.isArray(s.history)) { 
-                        s.history.forEach(h => { 
-                            if (h.points > 0 && h.reason.toLowerCase().includes('tiến bộ')) noLucPoints += h.points; 
-                            if (h.points > 0 && (h.category === 'Phong trào' || h.category === 'Nề nếp' || h.category === 'Trách nhiệm')) hiepSiPoints += h.points; 
-                        }); 
-                    } 
+                    if (Array.isArray(s.history)) s.history.forEach(processHistory); 
                 } 
                 else if (String(window.selectedWeekFilter).startsWith('month_')) {
-                    // XỬ LÝ LỌC THEO THÁNG
                     const m = parseInt(window.selectedWeekFilter.split('_')[1]);
                     displayPoints = 0;
                     if (Array.isArray(s.history)) { 
                         s.history.forEach(h => { 
-                            if (h.date) {
-                                const hMonth = new Date(h.date).getMonth() + 1;
-                                if (hMonth === m) { 
-                                    displayPoints += (h.points || 0); 
-                                    if (h.points > 0 && h.reason.toLowerCase().includes('tiến bộ')) noLucPoints += h.points; 
-                                    if (h.points > 0 && (h.category === 'Phong trào' || h.category === 'Nề nếp' || h.category === 'Trách nhiệm')) hiepSiPoints += h.points; 
-                                }
-                            }
+                            if (h.date && (new Date(h.date).getMonth() + 1) === m) processHistory(h); 
                         }); 
                     } 
                 }
                 else { 
-                    // XỬ LÝ LỌC THEO TUẦN
                     const w = parseInt(window.selectedWeekFilter); 
                     displayPoints = 0;
                     if (Array.isArray(s.history)) { 
-                        s.history.forEach(h => { 
-                            if (h.week == w) { 
-                                displayPoints += (h.points || 0); 
-                                if (h.points > 0 && h.reason.toLowerCase().includes('tiến bộ')) noLucPoints += h.points; 
-                                if (h.points > 0 && (h.category === 'Phong trào' || h.category === 'Nề nếp' || h.category === 'Trách nhiệm')) hiepSiPoints += h.points; 
-                            } 
-                        }); 
+                        s.history.forEach(h => { if (h.week == w) processHistory(h); }); 
                     } 
                 } 
                 return { ...s, calculatedPoints: displayPoints, noLucPoints, hiepSiPoints }; 
             });
 
-            // TÍNH TOÁN DANH HIỆU
             const sortedStudents = [...studentsCalculated].sort((a,b) => (b.calculatedPoints || 0) - (a.calculatedPoints || 0)); 
             const tinhHoa = sortedStudents.length > 0 && sortedStudents[0].calculatedPoints > 0 ? sortedStudents[0] : null;
             
             const sortedNoLuc = [...studentsCalculated].sort((a,b) => b.noLucPoints - a.noLucPoints); 
-            const ngoiSaoNoLuc = sortedNoLuc.length > 0 && sortedNoLuc[0].noLucPoints > 0 ? sortedNoLuc[0] : (sortedStudents.length > 1 ? sortedStudents[1] : null);
+            const ngoiSaoNoLuc = sortedNoLuc.length > 0 && sortedNoLuc[0].noLucPoints > 0 ? sortedNoLuc[0] : null;
             
             const sortedHiepSi = [...studentsCalculated].sort((a,b) => b.hiepSiPoints - a.hiepSiPoints); 
-            const hiepSiThamLang = sortedHiepSi.length > 0 && sortedHiepSi[0].hiepSiPoints > 0 ? sortedHiepSi[0] : (sortedStudents.length > 2 ? sortedStudents[2] : null);
+            const hiepSiThamLang = sortedHiepSi.length > 0 && sortedHiepSi[0].hiepSiPoints > 0 ? sortedHiepSi[0] : null;
             
-            // XUẤT HTML BỘ LỌC
             let weekOptionsHtml = `<option value="all" ${window.selectedWeekFilter === 'all' ? 'selected' : ''}>-- Cả Năm Học (Tất cả) --</option>`;
             
             const schoolMonths = [8, 9, 10, 11, 12, 1, 2, 3, 4, 5];
             weekOptionsHtml += `<optgroup label="Lọc theo Tháng">`;
-            schoolMonths.forEach(m => {
-                weekOptionsHtml += `<option value="month_${m}" ${window.selectedWeekFilter === `month_${m}` ? 'selected' : ''}>Tháng ${m}</option>`;
-            });
-            weekOptionsHtml += `</optgroup>`;
-
-            weekOptionsHtml += `<optgroup label="Lọc theo Tuần">`;
+            schoolMonths.forEach(m => { weekOptionsHtml += `<option value="month_${m}" ${window.selectedWeekFilter === `month_${m}` ? 'selected' : ''}>Tháng ${m}</option>`; });
+            weekOptionsHtml += `</optgroup><optgroup label="Lọc theo Tuần">`;
             for (let w = 1; w <= 35; w++) { weekOptionsHtml += `<option value="${w}" ${window.selectedWeekFilter == w ? 'selected' : ''}>Tuần ${w}</option>`; }
             weekOptionsHtml += `</optgroup>`;
             
@@ -833,7 +822,7 @@
 
             const filterTitleText = window.selectedWeekFilter !== 'all' ? (String(window.selectedWeekFilter).startsWith('month_') ? '(Tháng ' + window.selectedWeekFilter.split('_')[1] + ')' : '(Tuần ' + window.selectedWeekFilter + ')') : '';
 
-            return `<div class="max-w-7xl mx-auto space-y-6 animate-fade-in pb-12"><div class="flex flex-col md:flex-row justify-between items-start md:items-center py-2 border-b border-slate-200 pb-6 gap-4"><div><h2 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3"><i class="ph-fill ph-trophy text-yellow-500"></i> Bảng Tuyên Dương</h2><p class="text-slate-500 text-sm font-medium mt-1">Vinh danh các danh hiệu theo tháng, tuần hoặc cả năm</p></div><div class="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm w-full md:w-auto"><span class="text-xs font-bold text-slate-500 pl-3 uppercase tracking-wider whitespace-nowrap"><i class="ph-bold ph-funnel mr-1"></i> Xem theo:</span><select onchange="window.selectedWeekFilter = this.value; window.renderLayout();" class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-blueAccent outline-none cursor-pointer">${weekOptionsHtml}</select></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">${renderAwardCard('Tinh Hoa Lớp', 'ph-crown', 'yellow', tinhHoa, 'Tổng điểm thi đua cao nhất', 'Tổng điểm', tinhHoa ? tinhHoa.calculatedPoints : 0)}${renderAwardCard('Ngôi Sao Nỗ Lực', 'ph-shooting-star', 'blue', ngoiSaoNoLuc, 'Tiến bộ và cố gắng vươn lên', 'Điểm nỗ lực', ngoiSaoNoLuc ? (ngoiSaoNoLuc.noLucPoints > 0 ? ngoiSaoNoLuc.noLucPoints : ngoiSaoNoLuc.calculatedPoints) : 0)}${renderAwardCard('Hiệp Sĩ Thầm Lặng', 'ph-shield-star', 'emerald', hiepSiThamLang, 'Cống hiến phong trào & nề nếp', 'Điểm cống hiến', hiepSiThamLang ? (hiepSiThamLang.hiepSiPoints > 0 ? hiepSiThamLang.hiepSiPoints : hiepSiThamLang.calculatedPoints) : 0)}</div><div class="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm mt-8"><div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Bảng xếp hạng tổng quát ${filterTitleText}</div><div class="divide-y divide-slate-100">${sortedStudents.map((s, i) => `<div class="flex items-center justify-between py-3 hover:bg-slate-50 rounded-xl px-2 transition-colors"><div class="flex items-center gap-4"><span class="w-8 font-black ${i < 3 ? 'text-yellow-500 text-lg' : 'text-slate-300 text-sm'} text-center">${i + 1}</span>${window.getAvatarImg(s.avatarUrl, s.name, "w-10 h-10")}<div><div class="font-bold text-slate-800 text-sm">${s.name}</div><div class="text-[10px] font-bold text-slate-400 uppercase">${s.group}</div></div></div><div class="font-black text-blueAccent text-base">${s.calculatedPoints} đ</div></div>`).join('') || '<div class="py-8 text-center text-slate-400">Chưa có dữ liệu thi đua.</div>'}</div></div></div>`;
+            return `<div class="max-w-7xl mx-auto space-y-6 animate-fade-in pb-12"><div class="flex flex-col md:flex-row justify-between items-start md:items-center py-2 border-b border-slate-200 pb-6 gap-4"><div><h2 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3"><i class="ph-fill ph-trophy text-yellow-500"></i> Bảng Tuyên Dương</h2><p class="text-slate-500 text-sm font-medium mt-1">Vinh danh các danh hiệu theo tháng, tuần hoặc cả năm</p></div><div class="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm w-full md:w-auto"><span class="text-xs font-bold text-slate-500 pl-3 uppercase tracking-wider whitespace-nowrap"><i class="ph-bold ph-funnel mr-1"></i> Xem theo:</span><select onchange="window.selectedWeekFilter = this.value; window.renderLayout();" class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-blueAccent outline-none cursor-pointer">${weekOptionsHtml}</select></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">${renderAwardCard('Tinh Hoa Lớp', 'ph-crown', 'yellow', tinhHoa, 'Tổng điểm thi đua cao nhất', 'Tổng điểm', tinhHoa ? tinhHoa.calculatedPoints : 0)}${renderAwardCard('Ngôi Sao Nỗ Lực', 'ph-shooting-star', 'blue', ngoiSaoNoLuc, 'Ghi nhận sự chủ động và vượt khó', 'Điểm nỗ lực', ngoiSaoNoLuc ? ngoiSaoNoLuc.noLucPoints : 0)}${renderAwardCard('Hiệp Sĩ Thầm Lặng', 'ph-shield-star', 'emerald', hiepSiThamLang, 'Cống hiến ôn thi HSG & phong trào', 'Điểm cống hiến', hiepSiThamLang ? hiepSiThamLang.hiepSiPoints : 0)}</div><div class="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm mt-8"><div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Bảng xếp hạng tổng quát ${filterTitleText}</div><div class="divide-y divide-slate-100">${sortedStudents.map((s, i) => `<div class="flex items-center justify-between py-3 hover:bg-slate-50 rounded-xl px-2 transition-colors"><div class="flex items-center gap-4"><span class="w-8 font-black ${i < 3 ? 'text-yellow-500 text-lg' : 'text-slate-300 text-sm'} text-center">${i + 1}</span>${window.getAvatarImg(s.avatarUrl, s.name, "w-10 h-10")}<div><div class="font-bold text-slate-800 text-sm">${s.name}</div><div class="text-[10px] font-bold text-slate-400 uppercase">${s.group}</div></div></div><div class="font-black text-blueAccent text-base">${s.calculatedPoints} đ</div></div>`).join('') || '<div class="py-8 text-center text-slate-400">Chưa có dữ liệu thi đua.</div>'}</div></div></div>`;
         };
         window.renderViewBaoCao = function() {
             const sortedStudents = [...window.state.students].sort((a,b) => (b.points || 0) - (a.points || 0));
